@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Generate from "./pages/Generate";
+import Edit from "./pages/Edit";
 import History from "./pages/History";
 import CareerHub from "./pages/CareerHub";
 import Settings from "./pages/Settings";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/generate" element={<Generate />} />
+          <Route path="/edit/:id" element={<Edit />} />
           <Route path="/history" element={<History />} />
           <Route path="/career-hub" element={<CareerHub />} />
           <Route path="/settings" element={<Settings />} />
