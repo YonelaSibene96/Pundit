@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Trash2 } from "lucide-react";
+import { Download, Loader2, Plus, Trash2, FileText, Save } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { CardDescription } from "@/components/ui/card";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 const pdfStyles = StyleSheet.create({
@@ -22,6 +24,10 @@ const pdfStyles = StyleSheet.create({
   listItem: { marginBottom: 3, paddingLeft: 15 },
   experienceItem: { marginBottom: 10 },
   bold: { fontWeight: "bold" },
+  coverLetterHeader: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
+  coverLetterContact: { fontSize: 10, color: "#666", marginBottom: 2 },
+  coverLetterSpacer: { fontSize: 10, marginBottom: 15 },
+  coverLetterBody: { fontSize: 11, lineHeight: 1.6, textAlign: "justify" },
 });
 
 const ResumePDF = ({ content }: any) => (
@@ -106,10 +112,50 @@ export default function Edit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resume, setResume] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [coverLetter, setCoverLetter] = useState<string>("");
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
 
   useEffect(() => {
     fetchResume();
+    fetchProfile();
+    fetchCoverLetter();
   }, [id]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error: any) {
+      console.error("Profile fetch error:", error);
+    }
+  };
+
+  const fetchCoverLetter = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cover_letters")
+        .select("*")
+        .eq("resume_id", id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setCoverLetter(data.content);
+      }
+    } catch (error: any) {
+      console.error("Cover letter fetch error:", error);
+    }
+  };
 
   const fetchResume = async () => {
     try {
@@ -153,6 +199,49 @@ export default function Edit() {
     }
   };
 
+  const handleGenerateCoverLetter = async () => {
+    if (!profile?.full_name) {
+      toast.error("Please complete your profile with your full name first");
+      navigate("/settings");
+      return;
+    }
+
+    setGeneratingCoverLetter(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-cover-letter", {
+        body: {
+          resumeContent: resume.content,
+          profile: profile,
+        },
+      });
+
+      if (error) throw error;
+
+      const coverLetterText = data.coverLetter;
+      setCoverLetter(coverLetterText);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      await supabase
+        .from("cover_letters")
+        .upsert({
+          resume_id: id,
+          user_id: user.id,
+          content: coverLetterText,
+        }, {
+          onConflict: "resume_id",
+        });
+
+      toast.success("Cover letter generated successfully!");
+    } catch (error: any) {
+      console.error("Generate cover letter error:", error);
+      toast.error(error.message || "Failed to generate cover letter");
+    } finally {
+      setGeneratingCoverLetter(false);
+    }
+  };
+
   const updateContent = (path: string[], value: any) => {
     setResume((prev: any) => {
       const newContent = { ...prev.content };
@@ -183,6 +272,27 @@ export default function Edit() {
       </Layout>
     );
   }
+
+  const CoverLetterPDF = () => (
+    <Document>
+      <Page size="A4" style={pdfStyles.page}>
+        <View style={pdfStyles.header}>
+          <Text style={pdfStyles.coverLetterHeader}>{profile?.full_name || ""}</Text>
+          {resume?.content?.contact?.email && (
+            <Text style={pdfStyles.coverLetterContact}>{resume.content.contact.email}</Text>
+          )}
+          {resume?.content?.contact?.phone && (
+            <Text style={pdfStyles.coverLetterContact}>{resume.content.contact.phone}</Text>
+          )}
+          {resume?.content?.location && (
+            <Text style={pdfStyles.coverLetterContact}>{resume.content.location}</Text>
+          )}
+          <Text style={pdfStyles.coverLetterSpacer}> </Text>
+          <Text style={pdfStyles.coverLetterBody}>{coverLetter}</Text>
+        </View>
+      </Page>
+    </Document>
+  );
 
   return (
     <Layout>
@@ -431,6 +541,97 @@ export default function Edit() {
             </Card>
           </div>
         </div>
+
+        <Separator className="my-8" />
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-6 w-6 text-primary" />
+                <CardTitle>Cover Letter</CardTitle>
+              </div>
+              {!coverLetter ? (
+                <Button
+                  onClick={handleGenerateCoverLetter}
+                  disabled={generatingCoverLetter}
+                >
+                  {generatingCoverLetter ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate Cover Letter
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <PDFDownloadLink
+                  document={<CoverLetterPDF />}
+                  fileName={`${profile?.full_name || "cover"}_CoverLetter.pdf`}
+                >
+                  {({ loading: pdfLoading }) => (
+                    <Button>
+                      {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                      Download Cover Letter
+                    </Button>
+                  )}
+                </PDFDownloadLink>
+              )}
+            </div>
+            <CardDescription>
+              {coverLetter
+                ? "Your AI-generated cover letter with personal details"
+                : "Generate a professional cover letter matching your resume"}
+            </CardDescription>
+          </CardHeader>
+          {coverLetter && (
+            <CardContent className="space-y-4">
+              <div className="space-y-2 p-4 bg-muted/30 rounded-lg">
+                <div className="font-semibold text-lg">{profile?.full_name}</div>
+                {resume?.content?.contact?.email && (
+                  <div className="text-sm text-muted-foreground">
+                    {resume.content.contact.email}
+                  </div>
+                )}
+                {resume?.content?.contact?.phone && (
+                  <div className="text-sm text-muted-foreground">
+                    {resume.content.contact.phone}
+                  </div>
+                )}
+                {resume?.content?.location && (
+                  <div className="text-sm text-muted-foreground">
+                    {resume.content.location}
+                  </div>
+                )}
+              </div>
+              <Separator />
+              <div className="whitespace-pre-wrap text-sm leading-relaxed p-4 bg-background rounded-lg border">
+                {coverLetter}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleGenerateCoverLetter}
+                  disabled={generatingCoverLetter}
+                  variant="outline"
+                  size="sm"
+                >
+                  {generatingCoverLetter ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    "Regenerate"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
       </div>
     </Layout>
   );
