@@ -8,103 +8,119 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Trash2, FileText, Save } from "lucide-react";
+import { Download, Loader2, Plus, Trash2, FileText, Save, Palette } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { CardDescription } from "@/components/ui/card";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { templates, TemplateCard, ResumeTemplate } from "@/components/ResumeTemplates";
 
-const pdfStyles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Helvetica", fontSize: 11 },
-  header: { marginBottom: 20 },
-  name: { fontSize: 24, fontWeight: "bold", marginBottom: 5 },
-  contact: { fontSize: 10, color: "#666", marginBottom: 3 },
-  section: { marginBottom: 15 },
-  sectionTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 8, color: "#059669", borderBottom: "2 solid #059669", paddingBottom: 3 },
-  text: { marginBottom: 5, lineHeight: 1.4 },
-  listItem: { marginBottom: 3, paddingLeft: 15 },
-  experienceItem: { marginBottom: 10 },
-  bold: { fontWeight: "bold" },
-  coverLetterHeader: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
-  coverLetterContact: { fontSize: 10, color: "#666", marginBottom: 2 },
-  coverLetterSpacer: { fontSize: 10, marginBottom: 15 },
-  coverLetterBody: { fontSize: 11, lineHeight: 1.6, textAlign: "justify" },
-});
+const getTemplateStyles = (template: ResumeTemplate) => {
+  const templateConfig = templates.find(t => t.id === template) || templates[0];
+  
+  return StyleSheet.create({
+    page: { padding: 40, fontFamily: "Helvetica", fontSize: 11 },
+    header: { marginBottom: 20 },
+    name: { fontSize: 24, fontWeight: "bold", marginBottom: 5, color: templateConfig.colors.primary },
+    contact: { fontSize: 10, color: "#666", marginBottom: 3 },
+    section: { marginBottom: 15 },
+    sectionTitle: { 
+      fontSize: 14, 
+      fontWeight: "bold", 
+      marginBottom: 8, 
+      color: templateConfig.colors.primary, 
+      borderBottom: `2 solid ${templateConfig.colors.primary}`, 
+      paddingBottom: 3 
+    },
+    text: { marginBottom: 5, lineHeight: 1.4, color: templateConfig.colors.text },
+    listItem: { marginBottom: 3, paddingLeft: 15, color: templateConfig.colors.text },
+    experienceItem: { marginBottom: 10 },
+    bold: { fontWeight: "bold", color: templateConfig.colors.text },
+    coverLetterHeader: { fontSize: 16, fontWeight: "bold", marginBottom: 4, color: templateConfig.colors.primary },
+    coverLetterContact: { fontSize: 10, color: "#666", marginBottom: 2 },
+    coverLetterSpacer: { fontSize: 10, marginBottom: 15 },
+    coverLetterBody: { fontSize: 11, lineHeight: 1.6, textAlign: "justify", color: templateConfig.colors.text },
+  });
+};
 
-const ResumePDF = ({ content }: any) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      <View style={pdfStyles.header}>
-        <Text style={pdfStyles.name}>{content.fullName}</Text>
-        <Text style={pdfStyles.contact}>{content.location}</Text>
-        <Text style={pdfStyles.contact}>{content.contact.email} | {content.contact.phone}</Text>
-        {content.contact.linkedin && <Text style={pdfStyles.contact}>{content.contact.linkedin}</Text>}
-      </View>
-
-      {content.summary && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>PROFESSIONAL SUMMARY</Text>
-          <Text style={pdfStyles.text}>{content.summary}</Text>
+const ResumePDF = ({ content, template }: any) => {
+  const styles = getTemplateStyles(template);
+  
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.name}>{content.fullName}</Text>
+          <Text style={styles.contact}>{content.location}</Text>
+          <Text style={styles.contact}>{content.contact.email} | {content.contact.phone}</Text>
+          {content.contact.linkedin && <Text style={styles.contact}>{content.contact.linkedin}</Text>}
         </View>
-      )}
 
-      {content.skills?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>SKILLS</Text>
-          <Text style={pdfStyles.text}>{content.skills.join(" • ")}</Text>
-        </View>
-      )}
+        {content.summary && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>PROFESSIONAL SUMMARY</Text>
+            <Text style={styles.text}>{content.summary}</Text>
+          </View>
+        )}
 
-      {content.experience?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>EXPERIENCE</Text>
-          {content.experience.map((exp: any, idx: number) => (
-            <View key={idx} style={pdfStyles.experienceItem}>
-              <Text style={pdfStyles.bold}>{exp.title} - {exp.company}</Text>
-              <Text style={pdfStyles.text}>{exp.period}</Text>
-              {exp.description?.map((desc: string, i: number) => (
-                <Text key={i} style={pdfStyles.listItem}>• {desc}</Text>
-              ))}
-            </View>
-          ))}
-        </View>
-      )}
+        {content.skills?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>SKILLS</Text>
+            <Text style={styles.text}>{content.skills.join(" • ")}</Text>
+          </View>
+        )}
 
-      {content.education?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>EDUCATION</Text>
-          {content.education.map((edu: any, idx: number) => (
-            <View key={idx} style={pdfStyles.experienceItem}>
-              <Text style={pdfStyles.bold}>{edu.degree}</Text>
-              <Text style={pdfStyles.text}>{edu.institution} - {edu.year}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+        {content.experience?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>EXPERIENCE</Text>
+            {content.experience.map((exp: any, idx: number) => (
+              <View key={idx} style={styles.experienceItem}>
+                <Text style={styles.bold}>{exp.title} - {exp.company}</Text>
+                <Text style={styles.text}>{exp.period}</Text>
+                {exp.description?.map((desc: string, i: number) => (
+                  <Text key={i} style={styles.listItem}>• {desc}</Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
 
-      {content.certifications?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>CERTIFICATIONS</Text>
-          {content.certifications.map((cert: string, idx: number) => (
-            <Text key={idx} style={pdfStyles.listItem}>• {cert}</Text>
-          ))}
-        </View>
-      )}
+        {content.education?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>EDUCATION</Text>
+            {content.education.map((edu: any, idx: number) => (
+              <View key={idx} style={styles.experienceItem}>
+                <Text style={styles.bold}>{edu.degree}</Text>
+                <Text style={styles.text}>{edu.institution} - {edu.year}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-      {content.projects?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>PROJECTS</Text>
-          {content.projects.map((proj: any, idx: number) => (
-            <View key={idx} style={pdfStyles.experienceItem}>
-              <Text style={pdfStyles.bold}>{proj.name}</Text>
-              <Text style={pdfStyles.text}>{proj.description}</Text>
-              <Text style={pdfStyles.text}>Technologies: {proj.technologies.join(", ")}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </Page>
-  </Document>
-);
+        {content.certifications?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>CERTIFICATIONS</Text>
+            {content.certifications.map((cert: string, idx: number) => (
+              <Text key={idx} style={styles.listItem}>• {cert}</Text>
+            ))}
+          </View>
+        )}
+
+        {content.projects?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>PROJECTS</Text>
+            {content.projects.map((proj: any, idx: number) => (
+              <View key={idx} style={styles.experienceItem}>
+                <Text style={styles.bold}>{proj.name}</Text>
+                <Text style={styles.text}>{proj.description}</Text>
+                <Text style={styles.text}>Technologies: {proj.technologies.join(", ")}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </Page>
+    </Document>
+  );
+};
 
 export default function Edit() {
   const { id } = useParams();
@@ -115,6 +131,7 @@ export default function Edit() {
   const [profile, setProfile] = useState<any>(null);
   const [coverLetter, setCoverLetter] = useState<string>("");
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplate>("modern");
 
   useEffect(() => {
     fetchResume();
@@ -273,26 +290,30 @@ export default function Edit() {
     );
   }
 
-  const CoverLetterPDF = () => (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        <View style={pdfStyles.header}>
-          <Text style={pdfStyles.coverLetterHeader}>{profile?.full_name || ""}</Text>
-          {resume?.content?.contact?.email && (
-            <Text style={pdfStyles.coverLetterContact}>{resume.content.contact.email}</Text>
-          )}
-          {resume?.content?.contact?.phone && (
-            <Text style={pdfStyles.coverLetterContact}>{resume.content.contact.phone}</Text>
-          )}
-          {resume?.content?.location && (
-            <Text style={pdfStyles.coverLetterContact}>{resume.content.location}</Text>
-          )}
-          <Text style={pdfStyles.coverLetterSpacer}> </Text>
-          <Text style={pdfStyles.coverLetterBody}>{coverLetter}</Text>
-        </View>
-      </Page>
-    </Document>
-  );
+  const CoverLetterPDF = () => {
+    const styles = getTemplateStyles(selectedTemplate);
+    
+    return (
+      <Document>
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Text style={styles.coverLetterHeader}>{profile?.full_name || ""}</Text>
+            {resume?.content?.contact?.email && (
+              <Text style={styles.coverLetterContact}>{resume.content.contact.email}</Text>
+            )}
+            {resume?.content?.contact?.phone && (
+              <Text style={styles.coverLetterContact}>{resume.content.contact.phone}</Text>
+            )}
+            {resume?.content?.location && (
+              <Text style={styles.coverLetterContact}>{resume.content.location}</Text>
+            )}
+            <Text style={styles.coverLetterSpacer}> </Text>
+            <Text style={styles.coverLetterBody}>{coverLetter}</Text>
+          </View>
+        </Page>
+      </Document>
+    );
+  };
 
   return (
     <Layout>
@@ -308,7 +329,7 @@ export default function Edit() {
               Save Changes
             </Button>
             <PDFDownloadLink
-              document={<ResumePDF content={resume.content} />}
+              document={<ResumePDF content={resume.content} template={selectedTemplate} />}
               fileName={`${resume.content.fullName}_Resume.pdf`}
             >
               {({ loading: pdfLoading }) => (
@@ -320,6 +341,30 @@ export default function Edit() {
             </PDFDownloadLink>
           </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Palette className="h-6 w-6 text-primary" />
+              <CardTitle>Design Templates</CardTitle>
+            </div>
+            <CardDescription>
+              Choose a template design for your resume and cover letter
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {templates.map((template) => (
+                <TemplateCard
+                  key={template.id}
+                  template={template}
+                  selected={selectedTemplate === template.id}
+                  onSelect={setSelectedTemplate}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-6">
@@ -463,7 +508,12 @@ export default function Edit() {
                 <div className="p-6 bg-background rounded-lg border shadow-sm">
                   <div className="space-y-4">
                     <div className="border-b pb-4">
-                      <h2 className="text-2xl font-bold">{resume.content.fullName}</h2>
+                      <h2 
+                        className="text-2xl font-bold" 
+                        style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                      >
+                        {resume.content.fullName}
+                      </h2>
                       <p className="text-sm text-muted-foreground">{resume.content.location}</p>
                       <p className="text-sm text-muted-foreground">
                         {resume.content.contact.email} | {resume.content.contact.phone}
@@ -475,21 +525,36 @@ export default function Edit() {
 
                     {resume.content.summary && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">PROFESSIONAL SUMMARY</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          PROFESSIONAL SUMMARY
+                        </h3>
                         <p className="text-sm">{resume.content.summary}</p>
                       </div>
                     )}
 
                     {resume.content.skills?.length > 0 && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">SKILLS</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          SKILLS
+                        </h3>
                         <p className="text-sm">{resume.content.skills.join(" • ")}</p>
                       </div>
                     )}
 
                     {resume.content.experience?.length > 0 && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">EXPERIENCE</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          EXPERIENCE
+                        </h3>
                         {resume.content.experience.map((exp: any, idx: number) => (
                           <div key={idx} className="mb-3">
                             <p className="font-semibold text-sm">{exp.title} - {exp.company}</p>
@@ -504,7 +569,12 @@ export default function Edit() {
 
                     {resume.content.education?.length > 0 && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">EDUCATION</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          EDUCATION
+                        </h3>
                         {resume.content.education.map((edu: any, idx: number) => (
                           <div key={idx} className="mb-2">
                             <p className="font-semibold text-sm">{edu.degree}</p>
@@ -516,7 +586,12 @@ export default function Edit() {
 
                     {resume.content.certifications?.length > 0 && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">CERTIFICATIONS</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          CERTIFICATIONS
+                        </h3>
                         {resume.content.certifications.map((cert: string, idx: number) => (
                           <p key={idx} className="text-sm ml-4">• {cert}</p>
                         ))}
@@ -525,7 +600,12 @@ export default function Edit() {
 
                     {resume.content.projects?.length > 0 && (
                       <div>
-                        <h3 className="font-bold text-primary mb-2">PROJECTS</h3>
+                        <h3 
+                          className="font-bold mb-2" 
+                          style={{ color: templates.find(t => t.id === selectedTemplate)?.colors.primary }}
+                        >
+                          PROJECTS
+                        </h3>
                         {resume.content.projects.map((proj: any, idx: number) => (
                           <div key={idx} className="mb-2">
                             <p className="font-semibold text-sm">{proj.name}</p>
